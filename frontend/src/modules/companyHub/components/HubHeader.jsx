@@ -1,11 +1,12 @@
 import React from 'react';
 
 const TABS = [
-    { id: 'community', label: 'Community' },
-    { id: 'insights', label: 'Insights' },
-    { id: 'resources', label: 'Resources' },
-    { id: 'mock', label: 'Mock Arena' },
-    { id: 'ama', label: 'AMA' },
+    { id: 'community',   label: 'Community' },
+    { id: 'experiences', label: '📋 Experiences' },
+    { id: 'insights',    label: 'Insights' },
+    { id: 'resources',   label: 'Resources' },
+    { id: 'mock',        label: 'Mock Arena' },
+    { id: 'ama',         label: 'AMA' },
 ];
 
 // Channel sidebar is 220px — company block must match to align tabs with chat

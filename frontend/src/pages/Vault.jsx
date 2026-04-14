@@ -1,120 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiCheckCircle, FiXCircle, FiTrendingUp, FiTarget, FiBox, FiClock, FiMapPin, FiBriefcase, FiAlertCircle, FiAward, FiStar, FiFilter, FiSearch, FiBookmark, FiThumbsUp, FiMessageSquare } from 'react-icons/fi';
+import { fetchExperiences } from '../services/experienceApi';
+import ShareExperienceModal from '../components/ShareExperienceModal';
 
-const experienceData = [
-  {
-    id: 'google',
-    logo: <FiSearch />, logoBg: 'rgba(66,133,244,0.15)',
-    company: 'Google', role: 'SDE II · Bangalore · Feb 2025',
-    verdict: 'selected', diff: 'hard', company_key: 'google',
-    search: 'google sde bangalore system design',
-    tags: [{ label: 'Selected', icon: <FiCheckCircle size={12} />, cls: 'selected' }, { label: 'Hard', icon: <FiAlertCircle size={12} />, cls: 'hard' }, { label: '5 Rounds', icon: <FiClock size={12} />, cls: 'rounds' }, { label: 'Onsite', icon: <FiMapPin size={12} />, cls: 'location' }],
-    preview: "The process started with a recruiter screen followed by a 45-min phone screen (DSA — trees + DP). Onsite had 2 coding rounds, 1 system design (distributed rate limiter), 1 Googleyness, and 1 hiring committee debrief...",
-    author: 'Riya Desai', college: 'IIT Bombay', authorInit: 'R', authorGrad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-    upvotes: 312, bookmarked: true, timeago: '3 days ago',
-    rounds: [
-      { name: 'Recruiter Screen', dur: '30 min', text: 'High-level resume walkthrough, motivation, timeline. Very relaxed. Standard questions about past projects and why Google.' },
-      { name: 'Phone Screen — DSA', dur: '45 min', text: 'Two medium/hard problems: (1) Serialize/Deserialize Binary Tree — needed optimal space. (2) DP — coin change variant with constraints. Solved both but rushed the DP.' },
-      { name: 'Onsite Round 1 — Coding', dur: '60 min', text: "Graph problem: detect cycle in directed graph + topological sort extension. Follow-up: find all SCCs. I used Kosaraju's — interviewer was impressed." },
-      { name: 'Onsite Round 2 — System Design', dur: '60 min', text: "Design a distributed rate limiter at Google scale. I opened with clarifying questions, drew the architecture with Redis cluster, discussed failure modes, leader election, and eventual consistency. They pushed hard on CAP trade-offs." },
-      { name: 'Googleyness & Leadership', dur: '45 min', text: "Standard behavioral — times you disagreed with a decision, handled ambiguity, worked across teams. Know your STAR stories cold." },
-    ],
-    tips: ['Practice explaining your design decisions aloud — they care as much about reasoning as the answer.', "Know CAP theorem cold with concrete examples (Spanner vs Bigtable trade-offs).", 'For Googleyness, have 3-4 stories that map to multiple values.', 'Ask good clarifying questions in system design before jumping in — shows maturity.'],
-  },
-  {
-    id: 'meta',
-    logo: <FiMessageSquare />, logoBg: 'rgba(24,119,242,0.15)',
-    company: 'Meta', role: 'Software Engineer E4 · Hyderabad · Jan 2025',
-    verdict: 'rejected', diff: 'hard', company_key: 'meta',
-    search: 'meta software engineer hyderabad behavioral',
-    tags: [{ label: 'Rejected', icon: <FiXCircle size={12} />, cls: 'rejected' }, { label: 'Hard', icon: <FiAlertCircle size={12} />, cls: 'hard' }, { label: '6 Rounds', icon: <FiClock size={12} />, cls: 'rounds' }, { label: 'Onsite', icon: <FiMapPin size={12} />, cls: 'location' }],
-    preview: "Got referred through a friend on the team. Phone screen was LeetCode hard — sliding window variant with optimization twist. Passed to onsite: 2 coding (arrays, graphs), 1 system design (design Instagram feed), 1 behavioral...",
-    author: 'Karan Mehta', college: 'NIT Trichy', authorInit: 'K', authorGrad: 'linear-gradient(135deg,#22d3ee,#6366f1)',
-    upvotes: 287, bookmarked: false, timeago: '1 week ago',
-    rounds: [
-      { name: 'Referral + Recruiter Call', dur: '20 min', text: "Referral from IIT alumnus on the team. Recruiter explained E3 vs E4 leveling. Scheduling was quick — 1 week to phone screen." },
-      { name: 'Phone Screen — LeetCode Hard', dur: '45 min', text: "Sliding window variant: find the minimum length subarray with sum ≥ K (with negative numbers). Needed prefix sums + deque optimization." },
-      { name: 'Onsite Coding 1 — Arrays & Strings', dur: '60 min', text: "Two problems: merge intervals extension + rotated sorted array search. Both solved optimally. Interviewer asked follow-ups on time/space complexity." },
-      { name: 'Onsite Coding 2 — Graphs', dur: '60 min', text: "Clone a graph with random pointers + find number of islands variant with diagonal connectivity. Solved both." },
-      { name: 'System Design — Instagram Feed', dur: '60 min', text: "My gap area. I proposed a pull-based feed but didn't go deep enough on the fanout problem for celebrities with 100M followers. Should have discussed hybrid push/pull." },
-      { name: 'Behavioral', dur: '45 min', text: "Meta-specific values: Move Fast, Be Bold, Be Open. Had solid stories but was rattled after the SD round." },
-    ],
-    tips: ['Know the celebrity problem in feed design — hybrid push/pull is the answer Meta wants.', "LeetCode Hard is real — practice sliding window, monotonic stacks, and segment trees.", "Don't let one bad round affect the next — compartmentalize.", "Read meta engineering blog posts before interviewing — shows genuine interest."],
-  },
-  {
-    id: 'amazon',
-    logo: <FiBox />, logoBg: 'rgba(255,153,0,0.15)',
-    company: 'Amazon', role: 'SDE I · Pune · Dec 2024',
-    verdict: 'selected', diff: 'med', company_key: 'amazon',
-    search: 'amazon sde pune leadership principles',
-    tags: [{ label: 'Selected', icon: <FiCheckCircle size={12} />, cls: 'selected' }, { label: 'Medium', icon: <FiAlertCircle size={12} />, cls: 'med' }, { label: '4 Rounds', icon: <FiClock size={12} />, cls: 'rounds' }, { label: 'Virtual', icon: <FiMapPin size={12} />, cls: 'location' }],
-    preview: "Amazon's process is very LP-heavy. OA had 2 coding Qs (medium difficulty) + a work simulation section. Virtual onsite had 2 coding rounds and 2 behavioral (LP) rounds. Every interviewer asks behavioral — know your STAR stories cold...",
-    author: 'Priya Nair', college: 'BITS Pilani', authorInit: 'P', authorGrad: 'linear-gradient(135deg,#f59e0b,#ef4444)',
-    upvotes: 245, bookmarked: true, timeago: '2 weeks ago',
-    rounds: [
-      { name: 'Online Assessment', dur: '90 min', text: "Two coding problems (medium — BFS variant + string manipulation) + a work style simulation section." },
-      { name: 'Technical Round 1 — DSA', dur: '60 min', text: "Binary tree diameter + a custom linked list problem. Interviewer asked to optimize after initial solution." },
-      { name: 'Technical Round 2 — DSA + LP', dur: '60 min', text: "DP problem (knapsack variant) + 2 LP questions. LP is weighted as heavily as coding at Amazon." },
-      { name: 'Bar Raiser', dur: '60 min', text: "Senior interviewer from a different team. 1 harder coding problem + deep LP dive. Had 3 strong ownership stories ready — landed the offer." },
-    ],
-    tips: ["Prepare 10+ STAR stories mapped to Amazon's 16 Leadership Principles.", "The Bar Raiser round is critical — they can veto the offer.", "During LP answers, quantify your impact wherever possible.", "Amazon OA work simulation: pick answers that show 'ownership' and 'bias for action'."],
-  },
-  {
-    id: 'microsoft',
-    logo: <FiBriefcase />, logoBg: 'rgba(0,120,212,0.15)',
-    company: 'Microsoft', role: 'SWE · Noida · Jan 2025',
-    verdict: 'selected', diff: 'med', company_key: 'microsoft',
-    search: 'microsoft swe noida azure',
-    tags: [{ label: 'Selected', icon: <FiCheckCircle size={12} />, cls: 'selected' }, { label: 'Medium', icon: <FiAlertCircle size={12} />, cls: 'med' }, { label: '4 Rounds', icon: <FiClock size={12} />, cls: 'rounds' }, { label: 'Onsite', icon: <FiMapPin size={12} />, cls: 'location' }],
-    preview: "Microsoft's process was pleasant. 3 technical rounds + 1 As-Appropriate (AA) round with a principal engineer. Coding rounds had a mix of DSA and design questions — they prefer candidates who explain thought process clearly...",
-    author: 'Saurabh K', college: 'DTU Delhi', authorInit: 'S', authorGrad: 'linear-gradient(135deg,#10b981,#6366f1)',
-    upvotes: 198, bookmarked: false, timeago: '2 weeks ago',
-    rounds: [
-      { name: 'Technical Round 1', dur: '60 min', text: "String manipulation + OOP design question (design a parking lot). They care about clean, maintainable code." },
-      { name: 'Technical Round 2', dur: '60 min', text: "Graph problem (shortest path with constraints) + mini system design: design a notification service." },
-      { name: 'Technical Round 3', dur: '60 min', text: "DP problem (longest palindromic subsequence) + behavioral (times you dealt with ambiguity)." },
-      { name: 'As-Appropriate (AA) Round', dur: '45 min', text: "Principal engineer from Azure team. Felt like a senior coffee chat. Offer came in 5 business days." },
-    ],
-    tips: ["Microsoft values communication — explain your thought process every step.", "The AA round is conversational — be curious and ask great questions.", "OOP and LLD are tested here more than at FAANG — know design patterns.", "Process is kinder than Google/Meta — interviewers guide you if you're stuck."],
-  },
-  {
-    id: 'flipkart',
-    logo: <FiBox />, logoBg: 'rgba(255,102,0,0.12)',
-    company: 'Flipkart', role: 'SDE Intern → FTE · Bangalore · Nov 2024',
-    verdict: 'intern', diff: 'easy', company_key: 'flipkart',
-    search: 'flipkart sde bangalore intern',
-    tags: [{ label: 'Intern→FTE', icon: <FiAward size={12} />, cls: 'intern' }, { label: 'Easy', icon: <FiAlertCircle size={12} />, cls: 'easy' }, { label: '3 Rounds', icon: <FiClock size={12} />, cls: 'rounds' }, { label: 'Virtual', icon: <FiMapPin size={12} />, cls: 'location' }],
-    preview: "Flipkart's intern process is very streamlined. CodeNation test (60 min), followed by 2 technical rounds focusing on DSA fundamentals and 1 HR round. Conversion offer came at end of internship...",
-    author: 'Aanya Rao', college: 'VIT Vellore', authorInit: 'A', authorGrad: 'linear-gradient(135deg,#f59e0b,#8b5cf6)',
-    upvotes: 176, bookmarked: false, timeago: '1 month ago',
-    rounds: [
-      { name: 'CodeNation Test', dur: '60 min', text: "2 DSA problems — easy-medium level. Focused on basic arrays and strings." },
-      { name: 'Technical Interview 1', dur: '60 min', text: "Recursion + DP fundamentals. Friendly interviewer. They value clarity of thought over speed." },
-      { name: 'Technical Interview 2 + HR', dur: '60 min', text: "OOP design + HR questions about career goals and why Flipkart. Conversion offer came after 3-month internship." },
-    ],
-    tips: ["Flipkart intern process is entry-level friendly — focus on fundamentals.", "During internship, volunteer for cross-team projects to boost conversion chances.", "Show ownership during intern project — present impact metrics in conversion review."],
-  },
-  {
-    id: 'stripe',
-    logo: <FiBriefcase />, logoBg: 'rgba(99,91,255,0.15)',
-    company: 'Stripe', role: 'Platform Engineer · Remote · Oct 2024',
-    verdict: 'rejected', diff: 'hard', company_key: 'stripe',
-    search: 'stripe platform engineer remote payments',
-    tags: [{ label: 'Rejected', icon: <FiXCircle size={12} />, cls: 'rejected' }, { label: 'Hard', icon: <FiAlertCircle size={12} />, cls: 'hard' }, { label: '6 Rounds', icon: <FiClock size={12} />, cls: 'rounds' }, { label: 'Remote', icon: <FiMapPin size={12} />, cls: 'location' }],
-    preview: "Stripe's loop is intense — 6 rounds over 2 days. Includes a unique 'Codelab' round (build a mini-feature in their codebase), systems design, coding, and 2 behavioral rounds. The Codelab was unlike anything else...",
-    author: 'Dev Sharma', college: 'IIT Madras', authorInit: 'D', authorGrad: 'linear-gradient(135deg,#6366f1,#22d3ee)',
-    upvotes: 167, bookmarked: false, timeago: '1 month ago',
-    rounds: [
-      { name: 'Recruiter Screen', dur: '30 min', text: "Background check, timeline, role alignment. Stripe moves fast once you pass this." },
-      { name: 'Technical Phone Screen', dur: '60 min', text: "Live coding on CoderPad. Two medium problems. Also asked about a past system you built — architecture, trade-offs." },
-      { name: 'Codelab Round', dur: '90 min', text: "Unique to Stripe: add a feature to a real-ish codebase (payments mini-app). Expected tests, documentation, clean code." },
-      { name: 'System Design', dur: '60 min', text: "Design a payment processing system with idempotency, retries, and double-charge prevention." },
-      { name: 'Behavioral Round 1', dur: '45 min', text: "Values-focused: ownership, craftsmanship, user empathy. Went well." },
-      { name: 'Behavioral Round 2 — Final Review', dur: '45 min', text: "Cross-functional round. Got rejected at committee level — 'strong technical, cultural fit concerns'. Vague feedback." },
-    ],
-    tips: ["The Codelab is make-or-break — write tests, handle edge cases, add comments.", "Stripe deeply values 'User Empathy' — frame everything from the user's perspective.", "For payment systems: always discuss idempotency keys and retry logic.", "Don't skip the human-side rounds — Stripe is selective about culture fit."],
-  },
-];
+
+// ── useDebounce helper ─────────────────────────────────
+function useDebounce(value, delay = 400) {
+  const [debounced, setDebounced] = React.useState(value);
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
 
 const tagClsStyles = (t) => ({
   selected: { background: t.cyanDim, color: t.cyan, border: `1px solid ${t.borderGlow}` },
@@ -176,18 +75,98 @@ const Vault = ({ t, dark }) => {
   const [search, setSearch] = useState('');
   const [verdictFilter, setVerdictFilter] = useState('all');
   const [diffFilter, setDiffFilter] = useState('');
-  const [companyFilter, setCompanyFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('');
   const [votes, setVotes] = useState({});
-  const [bookmarks, setBookmarks] = useState({ google: true, amazon: true });
+  const [bookmarks, setBookmarks] = useState({});
   const [modalExp, setModalExp] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
-  const filtered = experienceData.filter(exp => {
-    if (verdictFilter !== 'all' && exp.verdict !== verdictFilter) return false;
-    if (diffFilter && exp.diff !== diffFilter) return false;
-    if (companyFilter !== 'all' && exp.company_key !== companyFilter) return false;
-    if (search && !exp.search.includes(search.toLowerCase()) && !exp.preview.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
+  // Fetch full experience by ID when card is clicked
+  const openModal = async (cardExp) => {
+    setModalExp(cardExp);          // show card data immediately
+    setModalLoading(true);
+    try {
+      const res = await fetch(`http://localhost:5000/api/experiences/${cardExp.id}`);
+      if (res.ok) {
+        const { experience: raw } = await res.json();
+        // Build the full normalized object with all rounds/tips from DB
+        setModalExp({
+          ...cardExp,
+          rounds: (raw.rounds || []).map(r => ({
+            name: r.name || '',
+            dur: '',
+            text: [r.desc, r.questions ? `Questions: ${r.questions}` : ''].filter(Boolean).join('\n\n'),
+          })),
+          tips: raw.advice ? raw.advice.split('. ').filter(s => s.trim().length > 15).slice(0, 6) : [],
+          author: raw.author || cardExp.author,
+          college: raw.college || cardExp.college,
+          upvotes: raw.upvotes ?? cardExp.upvotes,
+        });
+      }
+    } catch (e) { /* keep card data */ }
+    finally { setModalLoading(false); }
+  };
+
+  // ── Live data ──────────────────────────────────────────────────────
+  const [experienceData, setExperienceData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const normalize = (exp) => ({
+    id: exp._id,
+    logo: <FiBriefcase />,
+    logoBg: 'rgba(6,182,212,0.12)',
+    company: exp.company,
+    role: `${exp.role}${exp.ctc ? ' · ' + exp.ctc : ''}`,
+    verdict: exp.verdict,
+    diff: exp.diff,
+    company_key: exp.company.toLowerCase(),
+    search: `${exp.company} ${exp.role} ${exp.college}`.toLowerCase(),
+    tags: [
+      exp.verdict === 'selected' ? { label: 'Selected', icon: <FiCheckCircle size={12} />, cls: 'selected' }
+        : exp.verdict === 'rejected' ? { label: 'Rejected', icon: <FiXCircle size={12} />, cls: 'rejected' }
+        : { label: 'Intern', icon: <FiAward size={12} />, cls: 'intern' },
+      { label: exp.diff === 'easy' ? 'Easy' : exp.diff === 'med' ? 'Medium' : 'Hard', icon: <FiAlertCircle size={12} />, cls: exp.diff },
+      { label: `${exp.rounds?.length || 0} Rounds`, icon: <FiClock size={12} />, cls: 'rounds' },
+      { label: exp.campus === 'oncampus' ? 'On-campus' : 'Remote', icon: <FiMapPin size={12} />, cls: 'location' },
+    ],
+    preview: exp.advice || (exp.rounds?.[0]?.desc) || '',
+    author: exp.author || 'Anonymous',
+    college: exp.college || '',
+    authorInit: exp.authorInit || 'A',
+    authorGrad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    upvotes: exp.upvotes || 0,
+    bookmarked: false,
+    timeago: exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+    rounds: (exp.rounds || []).map(r => ({ name: r.name, dur: '', text: `${r.desc}${r.questions ? ' Questions: ' + r.questions : ''}` })),
+    tips: exp.advice ? [exp.advice] : [],
   });
+
+  // Debounce inputs so API only fires 400ms after user stops typing
+  const debouncedCompany = useDebounce(companyFilter, 400);
+  const debouncedSearch  = useDebounce(search, 400);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const filters = {};
+      if (debouncedCompany) filters.company = debouncedCompany;
+      if (verdictFilter && verdictFilter !== 'all') filters.verdict = verdictFilter;
+      if (diffFilter) filters.diff = diffFilter;
+      if (debouncedSearch) filters.search = debouncedSearch;
+      console.log('[Vault] fetching with filters:', filters);
+      const data = await fetchExperiences(filters);
+      setExperienceData((data.experiences || []).map(normalize));
+      setTotal(data.total || 0);
+    } catch (e) {
+      console.error('[Vault] fetch failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedCompany, verdictFilter, diffFilter, debouncedSearch]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const toggleVote = (id) => setVotes(v => ({ ...v, [id]: !v[id] }));
   const toggleBookmark = (id) => setBookmarks(b => ({ ...b, [id]: !b[id] }));
@@ -205,9 +184,9 @@ const Vault = ({ t, dark }) => {
         </div>
         <div style={styles.heroStats}>
           {[
-            { val: '2,418', label: 'Total Reports', color: t.cyan },
-            { val: '67%', label: 'Selection Rate', color: t.textPrimary },
-            { val: '143', label: 'Your Saved', color: '#f97316' },
+            { val: total > 0 ? total.toLocaleString() : '—', label: 'Total Reports', color: t.cyan },
+            { val: total > 0 ? Math.round((experienceData.filter(e => e.verdict === 'selected').length / Math.max(experienceData.length, 1)) * 100) + '%' : '—', label: 'Selection Rate', color: t.textPrimary },
+            { val: Object.keys(bookmarks).filter(k => bookmarks[k]).length, label: 'Your Saved', color: '#f97316' },
           ].map((s, i) => (
             <div key={i} style={styles.statPill}>
               <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 26, fontWeight: 800, color: s.color }}>{s.val}</div>
@@ -245,14 +224,24 @@ const Vault = ({ t, dark }) => {
       {/* LAYOUT */}
       <div style={styles.layout}>
         <div>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: 22, marginBottom: 0 }}>
+                  <div style={{ height: 16, background: t.elevated, borderRadius: 6, width: '40%', marginBottom: 12 }} />
+                  <div style={{ height: 12, background: t.elevated, borderRadius: 6, width: '70%', marginBottom: 8 }} />
+                  <div style={{ height: 12, background: t.elevated, borderRadius: 6, width: '90%' }} />
+                </div>
+              ))}
+            </div>
+          ) : experienceData.length === 0 ? (
             <div style={styles.empty}>
-              <div style={{ display: 'flex', justifyContent: 'center', opacity: 0.5, marginBottom: 12, color: 'var(--text-muted)' }}><FiSearch size={40} /></div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>No results found</div>
+              <div style={{ display: 'flex', justifyContent: 'center', opacity: 0.5, marginBottom: 12, color: t.textMuted }}><FiSearch size={40} /></div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: t.textSecondary, marginBottom: 6 }}>No results found</div>
               <div style={{ fontSize: 13 }}>Try a different search or adjust your filters</div>
             </div>
-          ) : filtered.map(exp => (
-            <div key={exp.id} style={styles.expCard} onClick={() => setModalExp(exp)}>
+          ) : experienceData.map(exp => (
+            <div key={exp.id} style={styles.expCard} onClick={() => openModal(exp)}>
               <div style={styles.cardTop}>
                 <div style={{ width: 46, height: 46, borderRadius: 12, background: exp.logoBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{exp.logo}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -291,24 +280,34 @@ const Vault = ({ t, dark }) => {
             <div style={{ fontSize: 28, marginBottom: 8 }}>✍️</div>
             <div style={{ fontSize: 13.5, fontWeight: 700, marginBottom: 4, color: t.textPrimary }}>Share Your Experience</div>
             <div style={{ fontSize: 12, color: t.textMuted, marginBottom: 12, lineHeight: 1.5 }}>Help fellow students by sharing your interview journey. Earn 200 XP per accepted report.</div>
-            <button style={styles.submitBtn}>+ Submit Experience</button>
+            <button onClick={() => setShowShareModal(true)} style={styles.submitBtn}>+ Submit Experience</button>
           </div>
 
           <div style={styles.panel}>
             <div style={styles.panelTitle}>🏢 Filter by Company</div>
+            {/* Searchable company input */}
+            <div style={{ position: 'relative', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: t.elevated, border: `1px solid ${companyFilter ? t.borderGlow : t.border}`, borderRadius: 10, padding: '7px 12px', transition: 'border-color 0.2s' }}>
+                <FiSearch size={13} color={t.textMuted} />
+                <input
+                  type="text"
+                  placeholder="Search company…"
+                  value={companyFilter}
+                  onChange={e => setCompanyFilter(e.target.value)}
+                  style={{ background: 'none', border: 'none', outline: 'none', color: t.textPrimary, fontSize: 13, fontFamily: "'DM Sans',sans-serif", flex: 1 }}
+                />
+                {companyFilter && (
+                  <button onClick={() => setCompanyFilter('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, fontSize: 12, padding: 0, lineHeight: 1 }}>✕</button>
+                )}
+              </div>
+            </div>
+            {/* Quick-pick chips */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {[
-                { key: 'all', label: 'All', count: 2418 },
-                { key: 'google', label: '🇬 Google', count: 342 },
-                { key: 'meta', label: 'Ⓜ️ Meta', count: 287 },
-                { key: 'amazon', label: '📦 Amazon', count: 398 },
-                { key: 'microsoft', label: '💼 Microsoft', count: 271 },
-                { key: 'flipkart', label: '🛍️ Flipkart', count: 189 },
-                { key: 'stripe', label: '💳 Stripe', count: 94 },
-              ].map(c => (
-                <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 6, background: companyFilter === c.key ? t.cyanDim : t.elevated, border: `1px solid ${companyFilter === c.key ? t.borderGlow : t.border}`, borderRadius: 20, padding: '5px 11px', fontSize: 12, cursor: 'pointer', color: companyFilter === c.key ? t.cyanLight : 'inherit' }}
-                  onClick={() => setCompanyFilter(c.key)}>
-                  {c.label} <span style={{ fontSize: 10, color: t.textMuted }}>{c.count}</span>
+              {['Barclays', 'Google', 'Amazon', 'Microsoft', 'TCS', 'Infosys', 'Persistent Systems', 'Cognizant'].map(c => (
+                <div key={c}
+                  style={{ fontSize: 11.5, padding: '4px 10px', borderRadius: 20, background: companyFilter === c ? t.cyanDim : t.elevated, border: `1px solid ${companyFilter === c ? t.borderGlow : t.border}`, cursor: 'pointer', color: companyFilter === c ? t.cyanLight : t.textSecondary, transition: 'all 0.15s' }}
+                  onClick={() => setCompanyFilter(companyFilter === c ? '' : c)}>
+                  {c}
                 </div>
               ))}
             </div>
@@ -363,7 +362,15 @@ const Vault = ({ t, dark }) => {
             <div style={styles.modalBody}>
               <div style={styles.modalSectionTitle}><FiTarget style={{ marginRight: 6 }} /> Interview Rounds</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
-                {modalExp.rounds.map((round, i) => (
+                {modalLoading ? (
+                  [1,2,3].map(i => (
+                    <div key={i} style={{ ...styles.roundChip, opacity: 0.5 }}>
+                      <div style={{ height: 14, background: t.elevated, borderRadius: 6, width: '40%', marginBottom: 10 }} />
+                      <div style={{ height: 10, background: t.elevated, borderRadius: 6, width: '100%', marginBottom: 6 }} />
+                      <div style={{ height: 10, background: t.elevated, borderRadius: 6, width: '80%' }} />
+                    </div>
+                  ))
+                ) : modalExp.rounds.map((round, i) => (
                   <div key={i} style={styles.roundChip}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                       <div style={styles.roundNum}>{i + 1}</div>
@@ -396,6 +403,16 @@ const Vault = ({ t, dark }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Experience Modal */}
+      {showShareModal && (
+        <ShareExperienceModal
+          t={t}
+          dark={dark}
+          onClose={() => setShowShareModal(false)}
+          onSuccess={loadData}
+        />
       )}
     </div>
   );

@@ -13,6 +13,7 @@ import Notifications from './pages/Notifications';
 import ProgressTracker from './pages/ProgressTracker';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import MockArena from './pages/MockArena';
 import './styles/globals.css';
 
 export const ThemeContext = createContext({ dark: true, toggle: () => { } });
@@ -32,6 +33,7 @@ const CampusPlacementApp = () => {
   const [dark, setDark] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [feedRefreshKey, setFeedRefreshKey] = useState(0);
   const [detailExp, setDetailExp] = useState(null);
   // Read role from localStorage — set by auth on login/register
   const [role, setRole] = useState(() => {
@@ -95,12 +97,12 @@ const CampusPlacementApp = () => {
   const noRightPanelPages = new Set(['dashboard', 'roadmap', 'progress', 'vault', 'profile', 'settings', 'notifications', 'hubs', 'arena']);
   const showRight = RIGHT_PANEL_PAGES.has(activePage) && !noRightPanelPages.has(activePage);
   // Pages that need padding (not fullscreen or feed-style)
-  const PADDED_PAGES = new Set(['dashboard', 'roadmap', 'progress', 'profile', 'settings', 'notifications', 'vault']);
+  const PADDED_PAGES = new Set(['dashboard', 'roadmap', 'progress', 'profile', 'settings', 'notifications', 'vault', 'arena']);
 
   const renderCenter = () => {
     switch (activePage) {
       case 'home':
-        return <HomeFeed t={t} dark={dark} role={role} onOpenDetail={openDetail} />;
+        return <HomeFeed t={t} dark={dark} role={role} onOpenDetail={openDetail} refreshKey={feedRefreshKey} />;
       case 'detail':
         return detailExp
           ? <ExperienceDetail exp={detailExp} t={t} dark={dark} onBack={() => navigate('home')} />
@@ -121,6 +123,8 @@ const CampusPlacementApp = () => {
         return <Profile t={t} dark={dark} role={role} />;
       case 'settings':
         return <Settings t={t} dark={dark} role={role} onThemeToggle={() => setDark(d => !d)} />;
+      case 'arena':
+        return <MockArena t={t} dark={dark} role={role} />;
       default:
         return (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', flexDirection: 'column', gap: 10 }}>
@@ -194,7 +198,7 @@ const CampusPlacementApp = () => {
 
           {/* Share Experience Modal */}
           {shareOpen && (
-            <ShareExperienceModal t={t} dark={dark} onClose={() => setShareOpen(false)} />
+            <ShareExperienceModal t={t} dark={dark} onClose={() => setShareOpen(false)} onSuccess={() => setFeedRefreshKey(k => k + 1)} />
           )}
 
           {/* Profile Completion Modal — shown once on first login */}

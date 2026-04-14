@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.production
+
+# Build output
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Seed scripts (optional — remove this line if you want them in git)
+# seedChatMessages.js
+# seedExperiences.js
+# seedBarclaysReal.js

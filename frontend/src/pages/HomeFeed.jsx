@@ -1,88 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     FiArrowUp, FiArrowDown, FiMessageSquare, FiBookmark,
     FiUserPlus, FiShare2, FiFilter, FiChevronDown,
     FiMapPin, FiClock, FiAward, FiCheckCircle, FiXCircle,
     FiSearch, FiBriefcase, FiDollarSign, FiTarget,
 } from 'react-icons/fi';
+import { fetchExperiences, voteExperience } from '../services/experienceApi';
 
-/* ─── MOCK DATA ──────────────────────────────────────────── */
-const MOCK_EXPERIENCES = [
-    {
-        id: 1, followed: false,
-        author: 'Riya Desai', authorInit: 'R', college: 'IIT Bombay', authorGrad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-        company: 'Google', role: 'SDE II', ctc: '48 LPA', verdict: 'selected', diff: 'hard',
-        type: 'placement', campus: 'oncampus', timeago: '3 days ago',
-        rounds: 5, preview: "Started with a recruiter screen, then a 45-min phone screen focused on trees and dynamic programming. The onsite loop had 2 coding rounds, 1 system design (distributed rate limiter at scale), 1 Googleyness round, and 1 hiring committee debrief…",
-        upvotes: 312, downvotes: 8, comments: 47, saved: true,
-        companyColor: 'rgba(66,133,244,0.15)',
-    },
-    {
-        id: 2, followed: true,
-        author: 'Karan Mehta', authorInit: 'K', college: 'NIT Trichy', authorGrad: 'linear-gradient(135deg,#22d3ee,#6366f1)',
-        company: 'Meta', role: 'SWE E4', ctc: '52 LPA', verdict: 'rejected', diff: 'hard',
-        type: 'placement', campus: 'offcampus', timeago: '1 week ago',
-        rounds: 6, preview: "Got referred through a friend on the team. Phone screen was a LeetCode hard — sliding window variant with an optimization twist. Proceeded to onsite: two coding rounds (arrays, graphs), one system design (Instagram feed), and one behavioral…",
-        upvotes: 287, downvotes: 21, comments: 63, saved: false,
-        companyColor: 'rgba(24,119,242,0.15)',
-    },
-    {
-        id: 3, followed: false,
-        author: 'Priya Nair', authorInit: 'P', college: 'BITS Pilani', authorGrad: 'linear-gradient(135deg,#f59e0b,#ef4444)',
-        company: 'Amazon', role: 'SDE I', ctc: '28 LPA', verdict: 'selected', diff: 'med',
-        type: 'placement', campus: 'oncampus', timeago: '2 weeks ago',
-        rounds: 4, preview: "Amazon's process is LP-heavy. OA had 2 coding questions of medium difficulty plus a work simulation section. Virtual onsite had 2 coding rounds and 2 behavioral LP rounds. Know your Leadership Principle stories cold—they matter as much as coding…",
-        upvotes: 245, downvotes: 5, comments: 38, saved: true,
-        companyColor: 'rgba(255,153,0,0.15)',
-    },
-    {
-        id: 4, followed: true,
-        author: 'Saurabh K', authorInit: 'S', college: 'DTU Delhi', authorGrad: 'linear-gradient(135deg,#10b981,#6366f1)',
-        company: 'Microsoft', role: 'SWE', ctc: '32 LPA', verdict: 'selected', diff: 'med',
-        type: 'placement', campus: 'oncampus', timeago: '2 weeks ago',
-        rounds: 4, preview: "Microsoft's process was genuinely pleasant. Three technical rounds covered string manipulation, OOP design, graph problems, and mini system design. The As-Appropriate round felt like a senior coffee chat rather than an interrogation…",
-        upvotes: 198, downvotes: 3, comments: 29, saved: false,
-        companyColor: 'rgba(0,120,212,0.15)',
-    },
-    {
-        id: 5, followed: false,
-        author: 'Aanya Rao', authorInit: 'A', college: 'VIT Vellore', authorGrad: 'linear-gradient(135deg,#f59e0b,#8b5cf6)',
-        company: 'Flipkart', role: 'SDE Intern', ctc: '1.2L/mo', verdict: 'intern', diff: 'easy',
-        type: 'internship', campus: 'oncampus', timeago: '1 month ago',
-        rounds: 3, preview: "Flipkart's intern process is entry-level friendly. CodeNation test (60 min), then two technical rounds on DSA fundamentals and an HR round. The interviewers were supportive — they genuinely wanted you to succeed…",
-        upvotes: 176, downvotes: 2, comments: 21, saved: false,
-        companyColor: 'rgba(255,102,0,0.12)',
-    },
-    {
-        id: 6, followed: true,
-        author: 'Dev Sharma', authorInit: 'D', college: 'IIT Madras', authorGrad: 'linear-gradient(135deg,#6366f1,#22d3ee)',
-        company: 'Stripe', role: 'Platform Engineer', ctc: '55 LPA', verdict: 'rejected', diff: 'hard',
-        type: 'placement', campus: 'offcampus', timeago: '1 month ago',
-        rounds: 6, preview: "Stripe's loop is intense — six rounds over two days. The unique Codelab round requires you to add a feature to a real-ish payments codebase and write tests. Technical bar is extremely high; culture-fit rounds are just as important…",
-        upvotes: 167, downvotes: 9, comments: 33, saved: false,
-        companyColor: 'rgba(99,91,255,0.15)',
-    },
-    {
-        id: 7, followed: false,
-        author: 'Meera Joshi', authorInit: 'M', college: 'IIT Delhi', authorGrad: 'linear-gradient(135deg,#f43f5e,#f97316)',
-        company: 'Uber', role: 'Software Engineer', ctc: '38 LPA', verdict: 'selected', diff: 'med',
-        type: 'placement', campus: 'offcampus', timeago: '5 days ago',
-        rounds: 4, preview: "Uber's process moved incredibly fast — recruiter to offer in 12 days. Phone screen with a medium-level coding problem, then three technical rounds covering system design, distributed systems, and behavioral. Very collaborative interviewers…",
-        upvotes: 203, downvotes: 4, comments: 18, saved: false,
-        companyColor: 'rgba(0,0,0,0.4)',
-    },
-    {
-        id: 8, followed: true,
-        author: 'Rohan Verma', authorInit: 'R', college: 'IIT Kharagpur', authorGrad: 'linear-gradient(135deg,#22d3ee,#f59e0b)',
-        company: 'Atlassian', role: 'Software Dev', ctc: '42 LPA', verdict: 'selected', diff: 'med',
-        type: 'placement', campus: 'offcampus', timeago: '3 weeks ago',
-        rounds: 3, preview: "Atlassian does a values interview (Values, Craft, Execution, Courage, Open Company) which is refreshingly concrete. The technical rounds were challenging but fair — they want to see good code structure and communication more than raw speed…",
-        upvotes: 142, downvotes: 6, comments: 12, saved: false,
-        companyColor: 'rgba(0,82,204,0.15)',
-    },
-];
-
-const COMPANIES = ['All', 'Google', 'Meta', 'Amazon', 'Microsoft', 'Flipkart', 'Stripe', 'Uber', 'Atlassian'];
+const COMPANIES = ['All', 'Google', 'Meta', 'Amazon', 'Microsoft', 'Flipkart', 'Stripe', 'Uber', 'Atlassian', 'Barclays', 'TCS', 'Infosys', 'Wipro', 'Persistent', 'Cognizant'];
 const VERDICTS = ['All', 'Selected', 'Rejected', 'Intern'];
 const DIFFICULTIES = ['All', 'Easy', 'Medium', 'Hard'];
 const TYPES = ['All', 'Placement', 'Internship'];
@@ -155,6 +80,8 @@ function ExperienceCard({ exp, t, onOpen, onSave, onFollow }) {
     const handleVote = (dir) => setVotes(v => ({ up: dir === 'up' ? !v.up : false, down: dir === 'down' ? !v.down : false }));
     const totalUp = exp.upvotes + (votes.up ? 1 : 0) - (votes.down ? 1 : 0);
 
+    const roundsCount = exp.roundsCount ?? (Array.isArray(exp.rounds) ? exp.rounds.length : Number(exp.rounds) || 0);
+
     return (
         <article
             onClick={() => onOpen(exp)}
@@ -194,7 +121,7 @@ function ExperienceCard({ exp, t, onOpen, onSave, onFollow }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                         <VerdictBadge verdict={exp.verdict} t={t} />
                         <DiffBadge diff={exp.diff} />
-                        <span style={{ fontSize: 11, color: t.textMuted, display: 'flex', alignItems: 'center', gap: 3 }}><FiTarget size={11} /> {exp.rounds} rounds</span>
+                        <span style={{ fontSize: 11, color: t.textMuted, display: 'flex', alignItems: 'center', gap: 3 }}><FiTarget size={11} /> {roundsCount} rounds</span>
                         <span style={{ fontSize: 11, color: t.textMuted, display: 'flex', alignItems: 'center', gap: 3 }}><FiDollarSign size={11} /> {exp.ctc}</span>
                         <span style={{ fontSize: 11, color: t.textMuted, display: 'flex', alignItems: 'center', gap: 3 }}><FiMapPin size={11} /> {exp.campus === 'oncampus' ? 'On-campus' : 'Off-campus'}</span>
                     </div>
@@ -239,6 +166,65 @@ function ExperienceCard({ exp, t, onOpen, onSave, onFollow }) {
 /* ─── FILTER BAR ─────────────────────────────────────────── */
 function FilterBar({ filters, setFilters, t }) {
     const [open, setOpen] = useState(false);
+    const [companySearch, setCompanySearch] = useState('');
+
+    const ALL_COMPANIES = ['All', 'Google', 'Meta', 'Amazon', 'Microsoft', 'Flipkart', 'Stripe', 'Uber',
+        'Atlassian', 'Barclays', 'HSBC', 'Deutsche Bank', 'TCS', 'Infosys', 'Wipro',
+        'Persistent Systems', 'Persistent', 'Cognizant', 'Accenture', 'Goldman Sachs', 'JPMorgan',
+        'Adobe', 'Walmart', 'NVIDIA', 'Qualcomm', 'Samsung', 'Cisco', 'Oracle'];
+
+    const filteredCompanies = companySearch.trim()
+        ? ALL_COMPANIES.filter(c => c.toLowerCase().includes(companySearch.toLowerCase()))
+        : ALL_COMPANIES;
+
+    // Searchable company pill
+    const CompanyPill = () => {
+        const active = filters.company !== 'All';
+        return (
+            <div style={{ position: 'relative' }}>
+                <button
+                    onClick={() => { setOpen(open === 'company' ? false : 'company'); setCompanySearch(''); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, background: active ? t.cyanDim : t.elevated, border: `1px solid ${active ? t.borderGlow : t.border}`, color: active ? t.cyan : t.textSecondary, padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                >
+                    🏢 Company: <span style={{ fontWeight: 700 }}>{filters.company}</span>
+                    <FiChevronDown size={12} style={{ transform: open === 'company' ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                </button>
+                {open === 'company' && (
+                    <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: t.elevated, border: `1px solid ${t.border}`, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.4)', width: 220, animation: 'fadeUp 0.15s ease' }}>
+                        {/* Search box */}
+                        <div style={{ padding: '8px 8px 4px', borderBottom: `1px solid ${t.border}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.05)', border: `1px solid ${t.border}`, borderRadius: 8, padding: '5px 10px' }}>
+                                <FiSearch size={12} color={t.textMuted} />
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="Search company…"
+                                    value={companySearch}
+                                    onChange={e => setCompanySearch(e.target.value)}
+                                    style={{ background: 'none', border: 'none', outline: 'none', color: t.textPrimary, fontSize: 12, fontFamily: "'Sora', sans-serif", flex: 1, width: '100%' }}
+                                />
+                                {companySearch && (
+                                    <button onClick={() => setCompanySearch('')} style={{ background: 'none', border: 'none', color: t.textMuted, cursor: 'pointer', fontSize: 11, padding: 0 }}>✕</button>
+                                )}
+                            </div>
+                        </div>
+                        {/* Options list */}
+                        <div style={{ maxHeight: 220, overflowY: 'auto', padding: '4px' }}>
+                            {filteredCompanies.length === 0 ? (
+                                <div style={{ padding: '10px', fontSize: 12, color: t.textMuted, textAlign: 'center' }}>No match</div>
+                            ) : filteredCompanies.map(opt => (
+                                <button key={opt} onClick={() => { setFilters(f => ({ ...f, company: opt })); setOpen(false); setCompanySearch(''); }}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: filters.company === opt ? t.cyanDim : 'none', color: filters.company === opt ? t.cyan : t.textSecondary, border: 'none', padding: '7px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 12.5, fontFamily: "'Sora', sans-serif" }}>
+                                    {opt}
+                                    {filters.company === opt && <span style={{ fontSize: 10 }}>✓</span>}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const Pill = ({ label, options, key2 }) => (
         <div style={{ position: 'relative' }}>
@@ -262,42 +248,99 @@ function FilterBar({ filters, setFilters, t }) {
         </div>
     );
 
+    // Close dropdown when clicking outside
+    const ref = React.useRef();
+    React.useEffect(() => {
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', borderBottom: `1px solid ${t.border}`, background: t.surface }}>
+        <div ref={ref} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', borderBottom: `1px solid ${t.border}`, background: t.surface }}>
             <FiFilter size={14} color={t.textMuted} />
-            <Pill label="Company" options={COMPANIES} key2="company" />
+            <CompanyPill />
             <Pill label="Verdict" options={VERDICTS} key2="verdict" />
             <Pill label="Difficulty" options={DIFFICULTIES} key2="diff" />
             <Pill label="Type" options={TYPES} key2="type" />
             <Pill label="Campus" options={CAMPUS_TYPES} key2="campus" />
+            {(filters.company !== 'All' || filters.verdict !== 'All' || filters.diff !== 'All' || filters.type !== 'All' || filters.campus !== 'All') && (
+                <button onClick={() => setFilters({ company: 'All', verdict: 'All', diff: 'All', type: 'All', campus: 'All' })}
+                    style={{ fontSize: 11, color: '#f43f5e', background: 'rgba(244,63,94,0.08)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: 20, padding: '4px 10px', cursor: 'pointer' }}>
+                    ✕ Clear filters
+                </button>
+            )}
         </div>
     );
 }
 
 /* ─── HOME FEED ──────────────────────────────────────────── */
-const HomeFeed = ({ t, dark, onOpenDetail }) => {
+const HomeFeed = ({ t, dark, onOpenDetail, refreshKey = 0 }) => {
     const [tab, setTab] = useState('foryou');
     const [loading, setLoading] = useState(true);
-    const [experiences, setExperiences] = useState(MOCK_EXPERIENCES);
+    const [experiences, setExperiences] = useState([]);
+    const [total, setTotal] = useState(0);
     const [filters, setFilters] = useState({ company: 'All', verdict: 'All', diff: 'All', type: 'All', campus: 'All' });
+    const [error, setError] = useState('');
 
-    useEffect(() => {
-        setLoading(true);
-        const timer = setTimeout(() => setLoading(false), 900);
-        return () => clearTimeout(timer);
-    }, [tab]);
-
-    const displayed = (tab === 'following' ? experiences.filter(e => e.followed) : experiences).filter(e => {
-        if (filters.company !== 'All' && e.company !== filters.company) return false;
-        if (filters.verdict !== 'All' && e.verdict !== filters.verdict.toLowerCase()) return false;
-        if (filters.diff !== 'All') { const map = { Easy: 'easy', Medium: 'med', Hard: 'hard' }; if (e.diff !== map[filters.diff]) return false; }
-        if (filters.type !== 'All' && e.type !== filters.type.toLowerCase()) return false;
-        if (filters.campus !== 'All') { const map = { 'On-campus': 'oncampus', 'Off-campus': 'offcampus' }; if (e.campus !== map[filters.campus]) return false; }
-        return true;
+    // Normalize API doc → card shape
+    const normalize = (exp) => ({
+        id: exp._id,
+        _id: exp._id,
+        author: exp.author || 'Anonymous',
+        authorInit: exp.authorInit || 'A',
+        authorGrad: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+        college: exp.college || '',
+        company: exp.company,
+        role: exp.role,
+        ctc: exp.ctc || '',
+        verdict: exp.verdict,
+        diff: exp.diff,
+        type: exp.type,
+        campus: exp.campus,
+        timeago: exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '',
+        advice: exp.advice || '',
+        description: exp.description || '',
+        rounds: Array.isArray(exp.rounds) ? exp.rounds : [],
+        roundsCount: exp.rounds?.length || 0,
+        preview: exp.advice || (exp.rounds?.[0]?.desc) || '',
+        upvotes: exp.upvotes || 0,
+        downvotes: exp.downvotes || 0,
+        comments: exp.comments || 0,
+        saved: false,
+        followed: false,
+        companyColor: 'rgba(6,182,212,0.15)',
     });
+
+    const loadExperiences = useCallback(async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const apiFilters = {};
+            if (filters.company !== 'All') apiFilters.company = filters.company;
+            if (filters.verdict !== 'All') apiFilters.verdict = filters.verdict;
+            if (filters.diff !== 'All') apiFilters.diff = filters.diff;
+            if (filters.type !== 'All') apiFilters.type = filters.type;
+            if (filters.campus !== 'All') apiFilters.campus = filters.campus;
+            const data = await fetchExperiences(apiFilters);
+            setExperiences((data.experiences || []).map(normalize));
+            setTotal(data.total || 0);
+        } catch (err) {
+            setError('Could not load experiences. Is the server running?');
+        } finally {
+            setLoading(false);
+        }
+    }, [filters, refreshKey]);
+
+    useEffect(() => { loadExperiences(); }, [loadExperiences]);
+
+    const displayed = tab === 'following' ? experiences.filter(e => e.followed) : experiences;
 
     const handleSave = (id) => setExperiences(prev => prev.map(e => e.id === id ? { ...e, saved: !e.saved } : e));
     const handleFollow = (id) => setExperiences(prev => prev.map(e => e.id === id ? { ...e, followed: !e.followed } : e));
+    const handleVoteResult = (id, result) => {
+        setExperiences(prev => prev.map(e => e.id === id ? { ...e, upvotes: result.upvotes, downvotes: result.downvotes } : e));
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: t.surface }}>
@@ -327,6 +370,13 @@ const HomeFeed = ({ t, dark, onOpenDetail }) => {
                 <FilterBar filters={filters} setFilters={setFilters} t={t} />
             </div>
 
+            {/* Error */}
+            {error && (
+                <div style={{ padding: '10px 20px', background: 'rgba(244,63,94,0.1)', borderBottom: `1px solid rgba(244,63,94,0.2)`, color: '#f43f5e', fontSize: 13 }}>
+                    ⚠ {error}
+                </div>
+            )}
+
             {/* Feed */}
             {loading ? (
                 <div>{[1, 2, 3].map(i => <ShimmerCard key={i} t={t} />)}</div>
@@ -337,9 +387,14 @@ const HomeFeed = ({ t, dark, onOpenDetail }) => {
                     <div style={{ fontSize: 13, color: t.textMuted, marginTop: 6 }}>Try adjusting your filters</div>
                 </div>
             ) : (
-                displayed.map(exp => (
-                    <ExperienceCard key={exp.id} exp={exp} t={t} dark={dark} onOpen={onOpenDetail} onSave={handleSave} onFollow={handleFollow} />
-                ))
+                <>
+                    <div style={{ padding: '8px 20px', fontSize: 12, color: t.textMuted, borderBottom: `1px solid ${t.border}` }}>
+                        {total} experience{total !== 1 ? 's' : ''} · showing {displayed.length}
+                    </div>
+                    {displayed.map(exp => (
+                        <ExperienceCard key={exp.id} exp={exp} t={t} dark={dark} onOpen={onOpenDetail} onSave={handleSave} onFollow={handleFollow} onVoteResult={handleVoteResult} />
+                    ))}
+                </>
             )}
         </div>
     );

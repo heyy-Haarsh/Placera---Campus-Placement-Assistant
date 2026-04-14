@@ -41,6 +41,51 @@ const TYPE_META = {
 
 const PHASE_ICONS = ['📐', '⚡', '🏛️', '🤝', '🎯'];
 
+const normalizeRoadmap = (raw) => {
+  if (!raw || typeof raw !== 'object' || typeof raw.company !== 'string' || !Array.isArray(raw.phases)) {
+    return null;
+  }
+
+  const phases = raw.phases.map((phase, pi) => ({
+    ...phase,
+    id: phase?.id || `phase_${pi + 1}`,
+    title: phase?.title || `Phase ${pi + 1}`,
+    weeks: Array.isArray(phase?.weeks)
+      ? phase.weeks.map((week, wi) => ({
+          ...week,
+          id: week?.id || `p${pi + 1}_w${wi + 1}`,
+          title: week?.title || `Week ${wi + 1}`,
+          meta: week?.meta || '',
+          tasks: Array.isArray(week?.tasks) ? week.tasks : [],
+        }))
+      : [],
+  }));
+
+  if (!phases.length) return null;
+
+  return {
+    ...raw,
+    phases,
+    focusTags: Array.isArray(raw.focusTags) ? raw.focusTags : [],
+    roundStructure: Array.isArray(raw.roundStructure) ? raw.roundStructure : [],
+  };
+};
+
+const normalizeProgress = (raw) => {
+  const base = createInitialProgress();
+  if (!raw || typeof raw !== 'object') return base;
+
+  return {
+    ...base,
+    ...raw,
+    completedTasks: Array.isArray(raw.completedTasks) ? raw.completedTasks : [],
+    completionDates: Array.isArray(raw.completionDates) ? raw.completionDates : [],
+    xp: Number.isFinite(raw.xp) ? raw.xp : 0,
+    currentPhase: Number.isFinite(raw.currentPhase) ? Math.min(5, Math.max(1, raw.currentPhase)) : 1,
+    currentWeek: Number.isFinite(raw.currentWeek) ? Math.max(1, raw.currentWeek) : 1,
+  };
+};
+
 // ──────────────────────────────────────────────────────────────────
 // WeekCard
 // ──────────────────────────────────────────────────────────────────
@@ -381,16 +426,17 @@ const CompanySearch = ({ t, dark, onSelect, currentCompany, loading }) => {
 const Roadmap = ({ t, dark }) => {
   // ── Persisted state ─────────────────────────────────────────────
   const [roadmap, setRoadmap] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('placera_roadmap') || 'null'); } catch { return null; }
+    try { return normalizeRoadmap(JSON.parse(localStorage.getItem('placera_roadmap') || 'null')); } catch { return null; }
   });
   const [userProgress, setUserProgress] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('placera_progress') || 'null') || createInitialProgress(); } catch { return createInitialProgress(); }
+    try { return normalizeProgress(JSON.parse(localStorage.getItem('placera_progress') || 'null')); } catch { return createInitialProgress(); }
   });
 
   // ── UI state ────────────────────────────────────────────────────
   const [viewPhase,  setViewPhase]  = useState(0);
   const [loading,    setLoading]    = useState(false);
   const [error,      setError]      = useState(null);
+  const [hasCelebratedCompletion, setHasCelebratedCompletion] = useState(false);
 
   // Persist
   useEffect(() => { if (roadmap) localStorage.setItem('placera_roadmap', JSON.stringify(roadmap)); }, [roadmap]);
@@ -427,6 +473,15 @@ const Roadmap = ({ t, dark }) => {
     });
   }, [roadmap, completedIds, userProgress.currentPhase]);
 
+  const isRoadmapComplete = phaseProgress.length > 0 && phaseProgress.every(ph => ph.pct === 100);
+
+  useEffect(() => {
+    if (isRoadmapComplete && !hasCelebratedCompletion) {
+      setHasCelebratedCompletion(true);
+      setViewPhase(Math.max(0, phaseProgress.length - 1));
+    }
+  }, [isRoadmapComplete, hasCelebratedCompletion, phaseProgress.length]);
+
   // Last 7 days for streak calendar
   const last7Days = useMemo(() => {
     const labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -460,6 +515,7 @@ const Roadmap = ({ t, dark }) => {
       setRoadmap(newRoadmap);
       setUserProgress(createInitialProgress());
       setViewPhase(0);
+      setHasCelebratedCompletion(false);
     } catch (err) {
       setLoading(false);
       setError(`Failed to infer profile for "${companyKey}": ${err.message}`);
@@ -468,6 +524,7 @@ const Roadmap = ({ t, dark }) => {
 
   const handleToggleTask = useCallback((taskId) => {
     setUserProgress(prev => {
+      if (!roadmap) return prev;
       let upd = engineCompleteTask(taskId, prev, roadmap);
       upd     = unlockNextPhase(upd, roadmap);
       return upd;
@@ -522,6 +579,31 @@ const Roadmap = ({ t, dark }) => {
       {/* ── FULL ROADMAP ── */}
       {roadmap && (
         <>
+          {isRoadmapComplete && (
+            <div style={{
+              background: dark ? 'linear-gradient(135deg, rgba(6,182,212,0.18), rgba(129,140,248,0.2))' : 'linear-gradient(135deg, rgba(6,182,212,0.1), rgba(129,140,248,0.12))',
+              border: `1px solid ${companyColor}55`,
+              borderRadius: 16,
+              padding: '16px 20px',
+              marginBottom: 16,
+              position: 'relative',
+              overflow: 'hidden',
+              animation: hasCelebratedCompletion ? 'roadmapPulse 0.7s ease 2' : 'none',
+            }}>
+              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 800, color: t.textPrimary, marginBottom: 4 }}>
+                🎉 Congrats! You completed the full roadmap.
+              </div>
+              <div style={{ fontSize: 12.5, color: t.textSecondary }}>
+                Every phase is done for <strong>{roadmap.company.replace('_', ' ')}</strong>. You are interview-ready.
+              </div>
+              <div aria-hidden style={{ position: 'absolute', right: 12, top: 8, display: 'flex', gap: 6, fontSize: 16 }}>
+                {['✨', '🎊', '🚀', '🏆', '✨'].map((em, i) => (
+                  <span key={`${em}_${i}`} style={{ animation: `confettiFloat 1.4s ease-in-out ${i * 0.12}s infinite` }}>{em}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* HERO */}
           <div style={{
             background: t.card, border: `1px solid ${t.border}`,
@@ -548,7 +630,7 @@ const Roadmap = ({ t, dark }) => {
                     {/* Focus tags */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                       <span style={{ fontSize: 10.5, fontWeight: 600, color: t.textMuted }}>Tailored for:</span>
-                      {roadmap.focusTags.map(tag => (
+                      {(roadmap.focusTags || []).map(tag => (
                         <span key={tag} style={{
                           fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 20,
                           background: `${companyColor}18`, color: companyColor,
@@ -563,7 +645,7 @@ const Roadmap = ({ t, dark }) => {
 
                 {/* Round structure */}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-                  {roadmap.roundStructure.map((r, i) => (
+                  {(roadmap.roundStructure || []).map((r, i) => (
                     <span key={i} style={{
                       fontSize: 10.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
                       background: t.elevated, border: `1px solid ${t.border}`, color: t.textMuted,
@@ -700,16 +782,16 @@ const Roadmap = ({ t, dark }) => {
                   ← Previous Phase
                 </button>
                 <button
-                  disabled={viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked}
+                  disabled={isRoadmapComplete || viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked}
                   onClick={() => setViewPhase(v => v + 1)}
-                  style={{ flex: 1, padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 600, border: 'none', background: (viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked) ? t.elevated : companyColor, color: (viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked) ? t.textMuted : '#fff', cursor: (viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked) ? 'not-allowed' : 'pointer' }}
+                  style={{ flex: 1, padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 600, border: 'none', background: isRoadmapComplete ? 'linear-gradient(90deg, #10b981, #22c55e)' : (viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked) ? t.elevated : companyColor, color: (isRoadmapComplete || viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked) ? (isRoadmapComplete ? '#ffffff' : t.textMuted) : '#fff', cursor: (isRoadmapComplete || viewPhase === 4 || phaseProgress[viewPhase + 1]?.isLocked) ? 'not-allowed' : 'pointer' }}
                 >
-                  Next Phase →
+                  {isRoadmapComplete ? '🎉 Congrats! Roadmap Complete' : 'Next Phase →'}
                 </button>
               </div>
 
               {/* Unlock hint */}
-              {phaseProgress[viewPhase] && !phaseProgress[viewPhase].isDone && (
+              {phaseProgress[viewPhase] && viewPhase < phaseProgress.length - 1 && !phaseProgress[viewPhase].isDone && (
                 <div style={{ marginTop: 10, padding: '10px 16px', borderRadius: 10, background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', fontSize: 12, color: '#818cf8' }}>
                   🔓 Complete <strong>{Math.max(0, Math.ceil(phaseProgress[viewPhase].total * 0.8) - phaseProgress[viewPhase].done)}</strong> more tasks to unlock Phase {viewPhase + 2}
                   <span style={{ color: t.textMuted }}> ({phaseProgress[viewPhase].pct}% / 80% needed)</span>
@@ -793,7 +875,7 @@ const Roadmap = ({ t, dark }) => {
                 <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, marginBottom: 12, color: t.textPrimary }}>
                   🎯 {roadmap.company.replace('_', ' ')} Interview Rounds
                 </div>
-                {roadmap.roundStructure.map((r, i) => (
+                {(roadmap.roundStructure || []).map((r, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
                     <div style={{ width: 7, height: 7, borderRadius: '50%', background: companyColor, flexShrink: 0 }} />
                     <span style={{ fontSize: 11, fontWeight: 700, color: companyColor, minWidth: 55 }}>Round {i + 1}</span>
@@ -808,6 +890,17 @@ const Roadmap = ({ t, dark }) => {
           </div>
         </>
       )}
+      <style>{`
+        @keyframes roadmapPulse {
+          0% { transform: scale(1); box-shadow: 0 0 0 rgba(129,140,248,0); }
+          50% { transform: scale(1.01); box-shadow: 0 0 24px rgba(129,140,248,0.25); }
+          100% { transform: scale(1); box-shadow: 0 0 0 rgba(129,140,248,0); }
+        }
+        @keyframes confettiFloat {
+          0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.85; }
+          50% { transform: translateY(-6px) rotate(8deg); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

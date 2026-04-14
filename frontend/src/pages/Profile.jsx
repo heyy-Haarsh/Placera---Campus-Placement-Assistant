@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     FiGithub, FiLinkedin, FiGlobe, FiEdit2, FiUpload,
     FiAward, FiCheckCircle, FiCode, FiTarget,
@@ -50,19 +50,34 @@ const Profile = ({ t, role }) => {
     const [referralOpen, setReferralOpen] = useState(true);
     const [takingSessions, setTaking] = useState(true);
 
+    // ── Real stats from API ──────────────────────────────────────
+    const currentUser = useMemo(() => {
+        try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+    }, []);
+    const [liveStats, setLiveStats] = useState(null);
+    useEffect(() => {
+        const userId = currentUser?._id || currentUser?.id;
+        if (!userId) return;
+        fetch(`http://localhost:5000/api/stats/${userId}`)
+            .then(r => r.json())
+            .then(setLiveStats)
+            .catch(() => {});
+    }, [currentUser?._id, currentUser?.id]);
+
     const BADGES = isSenior ? BADGES_SENIOR : BADGES_STUDENT;
 
+
     const STATS_STUDENT = [
-        { label: 'Mocks Taken', val: 5 },
-        { label: 'Problems Solved', val: 210 },
-        { label: 'AMA Attended', val: 3 },
-        { label: 'Helpful Replies', val: 28 },
+        { label: 'Mocks Taken',      val: liveStats?.mockSessions       ?? 0  },
+        { label: 'Problems Solved',  val: 210                                  },
+        { label: 'AMA Attended',     val: 3                                    },
+        { label: 'Experiences Shared', val: liveStats?.experiencesPosted ?? 0 },
     ];
     const STATS_SENIOR = [
-        { label: 'Sessions Conducted', val: 38 },
-        { label: 'Avg Rating', val: '4.8' },
-        { label: 'Students Mentored', val: 24 },
-        { label: 'Resources Verified', val: 17 },
+        { label: 'Sessions Conducted', val: 38       },
+        { label: 'Avg Rating',         val: '4.8'   },
+        { label: 'Students Mentored',  val: 24      },
+        { label: 'Resources Verified', val: 17      },
     ];
     const STATS = isSenior ? STATS_SENIOR : STATS_STUDENT;
 

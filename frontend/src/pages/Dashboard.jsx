@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
 import {
   FiZap, FiMap, FiTrendingUp, FiBookmark,
@@ -22,6 +22,14 @@ function useEngineState() {
   }, []);
   return { roadmap, progress };
 }
+
+// ── Helper: read logged-in user from localStorage ──────────────
+function useCurrentUser() {
+  return useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+  }, []);
+}
+
 
 const Dashboard = ({ onNavigate, t, dark }) => {
   const radarRef = useRef(null);
@@ -70,6 +78,19 @@ const Dashboard = ({ onNavigate, t, dark }) => {
       tagColor: task.difficulty === 'Hard' ? 'hard' : task.difficulty === 'Med' ? 'med' : 'easy',
     }));
   }, [roadmap, currentPhase, progress.completedTasks]);
+
+  // ── Real Mock Arena stats ────────────────────────────────────
+  const currentUser = useCurrentUser();
+  const [mockStats, setMockStats] = useState(null);
+  useEffect(() => {
+    const userId = currentUser?._id || currentUser?.id;
+    if (!userId) return;
+    fetch(`http://localhost:5000/api/stats/${userId}`)
+      .then(r => r.json())
+      .then(setMockStats)
+      .catch(() => {});
+  }, [currentUser?._id, currentUser?.id]);
+
 
   // ── Chart re-runs when dark OR roadmap changes ────────────────
   useEffect(() => {
@@ -151,41 +172,59 @@ const Dashboard = ({ onNavigate, t, dark }) => {
       });
     }
 
-    if (lineRef.current) {
-      if (lineChart.current) lineChart.current.destroy();
-      const ctx = lineRef.current.getContext('2d');
-      const lineGrad = ctx.createLinearGradient(0, 0, 0, 200);
-      lineGrad.addColorStop(0, 'rgba(6,182,212,0.28)');
-      lineGrad.addColorStop(1, 'rgba(6,182,212,0)');
-      lineChart.current = new Chart(lineRef.current, {
-        type: 'line',
-        data: {
-          labels: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8'],
-          datasets: [{
-            label: 'Score',
-            data: [52, 58, 55, 63, 68, 72, 70, 78],
-            fill: true,
-            backgroundColor: lineGrad,
-            borderColor: cyan,
-            borderWidth: 2.5,
-            tension: 0.4,
-            pointBackgroundColor: cyanLight,
-            pointBorderColor: isDark ? '#111' : '#f1f5f9',
-            pointBorderWidth: 2,
-            pointRadius: 5,
-            pointHoverRadius: 7,
-          }],
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
-            y: { grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } }, min: 40, max: 100 },
+      // ── Line chart: real mock session scores ───────────────────
+      const hasSessions = mockStats?.scoreTrend?.length > 0;
+      const lineLabels = hasSessions
+        ? mockStats.scoreTrend.map(s => s.label)
+        : ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8'];
+      const lineData = hasSessions
+        ? mockStats.scoreTrend.map(s => s.score)
+        : [52, 58, 55, 63, 68, 72, 70, 78];  // placeholder progression
+
+      if (lineRef.current) {
+        if (lineChart.current) lineChart.current.destroy();
+        const ctx = lineRef.current.getContext('2d');
+        const lineGrad = ctx.createLinearGradient(0, 0, 0, 200);
+        lineGrad.addColorStop(0, hasSessions ? 'rgba(6,182,212,0.28)' : 'rgba(6,182,212,0.10)');
+        lineGrad.addColorStop(1, 'rgba(6,182,212,0)');
+        lineChart.current = new Chart(lineRef.current, {
+          type: 'line',
+          data: {
+            labels: lineLabels,
+            datasets: [{
+              label: hasSessions ? 'Mock Score' : 'Sample Trend',
+              data: lineData,
+              fill: true,
+              backgroundColor: lineGrad,
+              borderColor: hasSessions ? cyan : 'rgba(6,182,212,0.4)',
+              borderWidth: 2.5,
+              borderDash: hasSessions ? [] : [5, 4],
+              tension: 0.4,
+              pointBackgroundColor: cyanLight,
+              pointBorderColor: isDark ? '#111' : '#f1f5f9',
+              pointBorderWidth: 2,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+            }],
           },
-        },
-      });
-    }
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (items) => hasSessions ? `Session ${items[0].dataIndex + 1}` : items[0].label,
+                  label: (item) => ` Score: ${item.raw}/100`,
+                }
+              }
+            },
+            scales: {
+              x: { grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } } },
+              y: { grid: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 } }, min: 0, max: 100 },
+            },
+          },
+        });
+      }
 
     if (barRef.current) {
       if (barChart.current) barChart.current.destroy();
@@ -221,7 +260,7 @@ const Dashboard = ({ onNavigate, t, dark }) => {
       if (lineChart.current) lineChart.current.destroy();
       if (barChart.current)  barChart.current.destroy();
     };
-  }, [dark, roadmap, progress.completedTasks]); // re-run when company or progress changes
+  }, [dark, roadmap, progress.completedTasks, mockStats]); // re-run when company or progress or session data changes
 
   // Use live tasks if roadmap exists, else show helpful defaults
   const tasks = liveWeekTasks.length > 0 ? liveWeekTasks : [
@@ -411,38 +450,61 @@ const Dashboard = ({ onNavigate, t, dark }) => {
       {/* ── MOCK SESSION + VAULT ── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
 
-        {/* Mock Session */}
+        {/* ── Mock Score Card (real data) ── */}
         <div style={{ ...cardStyle, border: `1px solid rgba(6,182,212,0.2)` }}>
-          <div style={cT}><FiVideo size={14} style={{ color: cyan }} /> Upcoming Mock Session</div>
-          <div style={{ ...cS, marginBottom: 15 }}>Your next scheduled interview practice</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 15 }}>
-            <div style={{ width: 44, height: 44, borderRadius: 11, background: isDark ? 'rgba(6,182,212,0.1)' : 'rgba(6,182,212,0.1)', border: `1px solid rgba(6,182,212,0.25)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 700, color: cyan, position: 'relative' }}>
-              S
-              <div style={{ position: 'absolute', bottom: -2, right: -2, width: 11, height: 11, borderRadius: '50%', background: cyan, border: `2px solid ${cardBg}` }} />
-            </div>
-            <div>
-              <div style={{ fontSize: 14.5, fontWeight: 600, marginBottom: 2, color: textPrimary }}>Siddharth Nair</div>
-              <div style={{ fontSize: 12, color: textMuted }}>SDE III · <span style={{ color: cyan, fontWeight: 500 }}>Google</span></div>
-              <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>4.9 · 280 sessions done</div>
-            </div>
+          <div style={cT}><FiVideo size={14} style={{ color: cyan }} /> Mock Arena Performance</div>
+          <div style={{ ...cS, marginBottom: 16 }}>
+            {mockStats?.mockSessions > 0
+              ? `${mockStats.mockSessions} session${mockStats.mockSessions > 1 ? 's' : ''} completed`
+              : 'No sessions yet — start your first mock!'}
           </div>
-          <div style={{ display: 'flex', gap: 7, marginBottom: 13 }}>
-            {['System Design', 'Google L4'].map((tag, i) => (
-              <div key={i} style={{ background: isDark ? 'rgba(6,182,212,0.1)' : 'rgba(6,182,212,0.1)', border: `1px solid rgba(6,182,212,0.25)`, borderRadius: 7, padding: '5px 11px', fontSize: 11.5, fontWeight: 600, color: cyan }}>{tag}</div>
+
+          {/* Real stats row */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            {[
+              { label: 'Sessions', val: mockStats?.mockSessions ?? '—' },
+              { label: 'Avg Score', val: mockStats?.mockSessions > 0 ? `${mockStats.avgOverall}/100` : '—' },
+              { label: 'Best', val: mockStats?.mockSessions > 0 ? `${mockStats.bestScore}/100` : '—' },
+            ].map((s, i) => (
+              <div key={i} style={{ flex: 1, background: elevated, borderRadius: 10, padding: '10px 12px', textAlign: 'center', border: `1px solid ${border}` }}>
+                <div style={{ fontFamily: "'Sora',sans-serif", fontSize: 20, fontWeight: 800, color: cyan }}>{s.val}</div>
+                <div style={{ fontSize: 10, color: textMuted, marginTop: 2 }}>{s.label}</div>
+              </div>
             ))}
           </div>
-          <div style={{ background: elevated, borderRadius: 9, padding: '10px 13px', marginBottom: 13, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FiCalendar size={15} style={{ color: textMuted, flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 11, color: textMuted, marginBottom: 2 }}>Scheduled for</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: textPrimary }}>Today, 7:30 PM IST</div>
+
+          {/* Score breakdown if sessions exist */}
+          {mockStats?.mockSessions > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+              {[
+                { label: 'Confidence', val: mockStats.avgConfidence },
+                { label: 'Communication', val: mockStats.avgCommunication },
+                { label: 'Technical', val: mockStats.avgTechnical },
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 11, color: textMuted, width: 90, flexShrink: 0 }}>{item.label}</div>
+                  <div style={{ flex: 1, height: 5, borderRadius: 3, background: elevated, overflow: 'hidden' }}>
+                    <div style={{ width: `${item.val}%`, height: '100%', borderRadius: 3, background: `linear-gradient(90deg, ${cyan}, ${cyanLight})`, transition: 'width 0.6s ease' }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: cyan, fontWeight: 700, width: 30, textAlign: 'right' }}>{item.val}%</div>
+                </div>
+              ))}
             </div>
-            <div style={{ marginLeft: 'auto', background: 'rgba(244,63,94,0.1)', color: RED, fontSize: 11.5, fontWeight: 700, padding: '3px 10px', borderRadius: 20 }}>2h 14m left</div>
-          </div>
-          <button style={{ width: '100%', background: cyan, border: 'none', borderRadius: 9, color: '#000', fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, fontWeight: 700, padding: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <FiVideo size={14} /> Join Session · Zoom
+          )}
+
+          {!mockStats?.mockSessions && (
+            <div style={{ background: elevated, borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 12, color: textSecondary, lineHeight: 1.5 }}>
+              🎯 Take a mock interview to see your score trend here. Each session tracks your confidence, communication, and technical accuracy.
+            </div>
+          )}
+
+          <button
+            onClick={() => onNavigate?.('arena')}
+            style={{ width: '100%', background: cyan, border: 'none', borderRadius: 9, color: '#000', fontFamily: "'DM Sans', sans-serif", fontSize: 13.5, fontWeight: 700, padding: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <FiVideo size={14} /> {mockStats?.mockSessions > 0 ? 'Start New Mock Session' : 'Start Your First Mock'}
           </button>
         </div>
+
 
         {/* New in Vault */}
         <div style={cardStyle}>

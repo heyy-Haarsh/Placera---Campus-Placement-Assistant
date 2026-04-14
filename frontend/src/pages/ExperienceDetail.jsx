@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     FiArrowLeft, FiArrowUp, FiArrowDown, FiMessageSquare,
     FiBookmark, FiShare2, FiUserPlus, FiCheckCircle, FiXCircle,
@@ -140,7 +140,45 @@ const ExperienceDetail = ({ exp, t, dark, onBack }) => {
     const [saved, setSaved] = useState(exp.saved || false);
     const [followed, setFollowed] = useState(exp.followed || false);
     const [openRound, setOpenRound] = useState(0);
-    const roundData = ROUND_DATA[exp.id] || ROUND_DATA[1];
+    const roundData = useMemo(() => {
+        const rawRounds = Array.isArray(exp.rounds) ? exp.rounds : [];
+        if (rawRounds.length) {
+            const normalizedRounds = rawRounds.map((r, idx) => {
+                const questionList = Array.isArray(r.questions)
+                    ? r.questions.filter(Boolean)
+                    : typeof r.questions === 'string'
+                        ? r.questions
+                            .split(/\n|;|•/g)
+                            .map(s => s.trim())
+                            .filter(Boolean)
+                        : [];
+                return {
+                    name: r.name || `Round ${idx + 1}`,
+                    dur: r.dur || r.duration || '45 min',
+                    desc: r.desc || r.description || 'Interview round details were shared by the candidate.',
+                    questions: questionList,
+                };
+            });
+
+            const advice = Array.isArray(exp.advice)
+                ? exp.advice.filter(Boolean)
+                : typeof exp.advice === 'string'
+                    ? exp.advice
+                        .split(/\n|;|•/g)
+                        .map(s => s.trim())
+                        .filter(Boolean)
+                    : [];
+
+            const description = exp.description
+                || exp.preview
+                || normalizedRounds[0]?.desc
+                || 'Candidate shared their interview flow and preparation insights below.';
+
+            return { description, rounds: normalizedRounds, advice };
+        }
+
+        return ROUND_DATA[exp.id] || ROUND_DATA[1];
+    }, [exp]);
 
     const totalUp = exp.upvotes + (votes.up ? 1 : 0) - (votes.down ? 1 : 0);
     const handleVote = (dir) => setVotes(v => ({ up: dir === 'up' ? !v.up : false, down: dir === 'down' ? !v.down : false }));
@@ -221,7 +259,7 @@ const ExperienceDetail = ({ exp, t, dark, onBack }) => {
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                                 <VerdictBadge verdict={exp.verdict} t={t} />
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: t.textMuted, background: t.elevated, padding: '6px 12px', borderRadius: 8 }}>
-                                    <FiTarget size={13} /> {exp.rounds} Rounds
+                                    <FiTarget size={13} /> {(exp.roundsCount ?? (Array.isArray(exp.rounds) ? exp.rounds.length : exp.rounds || 0))} Rounds
                                 </span>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: t.textMuted, background: t.elevated, padding: '6px 12px', borderRadius: 8 }}>
                                     <FiDollarSign size={13} /> {exp.ctc}
@@ -338,22 +376,9 @@ const ExperienceDetail = ({ exp, t, dark, onBack }) => {
                             style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 13.5, color: t.textPrimary, fontFamily: "'Sora', sans-serif" }}
                         />
                     </div>
-                    {/* Placeholder comments */}
-                    {[
-                        { init: 'V', name: 'Vikram Singh', text: 'Super helpful experience! The part about CAP theorem trade-offs really helped me nail my own SD round.', time: '2 days ago', grad: 'linear-gradient(135deg,#6366f1,#8b5cf6)' },
-                        { init: 'N', name: 'Neha Gupta', text: 'Did they ask you to write code on a whiteboard or CoderPad?', time: '1 day ago', grad: 'linear-gradient(135deg,#f59e0b,#ef4444)' },
-                    ].map((c, i) => (
-                        <div key={i} style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: c.grad, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{c.init}</div>
-                            <div>
-                                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
-                                    <span style={{ fontSize: 13, fontWeight: 600, color: t.textPrimary }}>{c.name}</span>
-                                    <span style={{ fontSize: 11, color: t.textMuted }}>{c.time}</span>
-                                </div>
-                                <p style={{ fontSize: 13.5, color: t.textSecondary, lineHeight: 1.6 }}>{c.text}</p>
-                            </div>
-                        </div>
-                    ))}
+                    <div style={{ fontSize: 13, color: t.textMuted }}>
+                        No comments yet for this experience.
+                    </div>
                 </div>
             </div>
 

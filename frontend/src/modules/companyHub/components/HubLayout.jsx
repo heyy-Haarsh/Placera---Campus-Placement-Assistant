@@ -5,17 +5,19 @@ import ResourcesModule from '../resources/ResourcesModule';
 import MockModule from '../mock/MockModule';
 import AMAModule from '../ama/AMAModule';
 import InsightsModule from '../insights/InsightsModule';
+import ExperiencesModule from '../experiences/ExperiencesModule';
 
 const HubLayout = ({ companyId, companyData, t, dark, role }) => {
     const [activeTab, setActiveTab] = useState('community');
 
     const renderModule = () => {
         switch (activeTab) {
-            case 'community': return <CommunityModule companyData={companyData} t={t} dark={dark} role={role} />;
-            case 'resources': return <ResourcesModule companyData={companyData} t={t} />;
-            case 'mock': return <MockModule companyData={companyData} t={t} />;
-            case 'ama': return <AMAModule companyData={companyData} t={t} />;
-            case 'insights': return <InsightsModule companyData={companyData} t={t} />;
+            case 'community':   return <CommunityModule companyData={companyData} t={t} dark={dark} role={role} />;
+            case 'experiences': return <ExperiencesModule companyData={companyData} t={t} dark={dark} />;
+            case 'resources':   return <ResourcesModule companyData={companyData} t={t} />;
+            case 'mock':        return <MockModule companyData={companyData} t={t} />;
+            case 'ama':         return <AMAModule companyData={companyData} t={t} />;
+            case 'insights':    return <InsightsModule companyData={companyData} t={t} />;
             default: return null;
         }
     };

@@ -3,12 +3,13 @@ import {
     FiX, FiPlus, FiTrash2, FiChevronDown, FiCheck,
     FiBriefcase, FiDollarSign, FiTarget, FiCode, FiMessageSquare
 } from 'react-icons/fi';
+import { submitExperience } from '../services/experienceApi';
 
 const DEFAULT_ROUND = { name: '', desc: '', questions: '' };
 
-const COMPANIES_LIST = ['Google', 'Meta', 'Amazon', 'Microsoft', 'Flipkart', 'Stripe', 'Uber', 'Atlassian', 'Adobe', 'Walmart', 'Goldman Sachs', 'JPMorgan', 'Infosys', 'TCS', 'Wipro'];
+const COMPANIES_LIST = ['Google', 'Meta', 'Amazon', 'Microsoft', 'Flipkart', 'Stripe', 'Uber', 'Atlassian', 'Adobe', 'Walmart', 'Goldman Sachs', 'JPMorgan', 'Barclays', 'HSBC', 'Deutsche Bank', 'Infosys', 'TCS', 'Wipro', 'Persistent Systems', 'Cognizant', 'Accenture', 'Capgemini', 'Tech Mahindra', 'L&T Technology', 'NVIDIA', 'Qualcomm', 'Samsung', 'Cisco', 'Oracle', 'SAP'];
 
-const ShareExperienceModal = ({ t, dark, onClose }) => {
+const ShareExperienceModal = ({ t, dark, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);
     const [submitted, setSubmitted] = useState(false);
     const [form, setForm] = useState({
@@ -35,9 +36,37 @@ const ShareExperienceModal = ({ t, dark, onClose }) => {
     const addRound = () => setForm(f => ({ ...f, rounds: [...f.rounds, { ...DEFAULT_ROUND }] }));
     const removeRound = (i) => setForm(f => ({ ...f, rounds: f.rounds.filter((_, j) => j !== i) }));
 
-    const handleSubmit = () => {
-        setSubmitted(true);
-        setTimeout(onClose, 2000);
+    const [submitting, setSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
+
+    const handleSubmit = async () => {
+        if (!form.company?.trim() || !form.role?.trim()) {
+            setSubmitError('Company and Role are required.');
+            return;
+        }
+        setSubmitting(true);
+        setSubmitError('');
+        try {
+            // Pull author info from localStorage (set at login)
+            const userRaw = localStorage.getItem('user');
+            const user = userRaw ? JSON.parse(userRaw) : {};
+            await submitExperience({
+                ...form,
+                company: form.company.trim(),
+                role: form.role.trim(),
+                author: user.name || 'Anonymous',
+                authorInit: user.name ? user.name[0].toUpperCase() : 'A',
+                college: user.college || '',
+                userId: user._id || user.id || undefined,
+            });
+            setSubmitted(true);
+            if (onSuccess) onSuccess(); // trigger parent refresh
+            setTimeout(onClose, 2200);
+        } catch (err) {
+            setSubmitError('Submission failed. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const total = 3;
@@ -154,11 +183,20 @@ const ShareExperienceModal = ({ t, dark, onClose }) => {
                                     <input
                                         placeholder="Search company..."
                                         value={companySearch || form.company}
-                                        onChange={e => { setCompanySearch(e.target.value); setCompanyOpen(true); }}
+                                        onChange={e => {
+                                            const value = e.target.value;
+                                            setCompanySearch(value);
+                                            setField('company', value);
+                                            setCompanyOpen(true);
+                                        }}
                                         onFocus={() => setCompanyOpen(true)}
                                         style={{ width: '100%', background: t.elevated, border: `1px solid ${t.border}`, borderRadius: 10, padding: '11px 14px', color: t.textPrimary, fontSize: 13.5, fontFamily: "'Sora', sans-serif", outline: 'none' }}
                                         onFocusCapture={e => e.target.style.borderColor = t.borderGlow}
-                                        onBlur={e => { e.target.style.borderColor = t.border; setTimeout(() => setCompanyOpen(false), 150); }}
+                                        onBlur={e => {
+                                            e.target.style.borderColor = t.border;
+                                            setField('company', (companySearch || form.company || '').trim());
+                                            setTimeout(() => setCompanyOpen(false), 150);
+                                        }}
                                     />
                                     {companyOpen && filteredCo.length > 0 && (
                                         <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: t.elevated, border: `1px solid ${t.border}`, borderRadius: 10, zIndex: 10, maxHeight: 200, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
@@ -284,20 +322,26 @@ const ShareExperienceModal = ({ t, dark, onClose }) => {
 
                 {/* Footer Buttons */}
                 {!submitted && (
-                    <div style={{ padding: '14px 24px', borderTop: `1px solid ${t.border}`, display: 'flex', gap: 10, flexShrink: 0 }}>
-                        {step > 1 && (
-                            <button onClick={() => setStep(s => s - 1)} style={{ flex: 1, background: t.elevated, border: `1px solid ${t.border}`, color: t.textSecondary, padding: '11px 0', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: "'Sora', sans-serif", transition: 'all 0.2s' }}>
-                                Back
-                            </button>
+                    <div style={{ padding: '14px 24px', borderTop: `1px solid ${t.border}`, flexShrink: 0 }}>
+                        {submitError && (
+                            <div style={{ color: '#f43f5e', fontSize: 12.5, marginBottom: 10, padding: '8px 12px', background: 'rgba(244,63,94,0.1)', borderRadius: 8 }}>
+                                ⚠ {submitError}
+                            </div>
                         )}
-                        <button
-                            onClick={step < 3 ? () => setStep(s => s + 1) : handleSubmit}
-                            style={{ flex: 2, background: t.cyan, border: 'none', color: '#000', padding: '11px 0', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: "'Sora', sans-serif", boxShadow: `0 4px 20px rgba(6,182,212,0.35)`, transition: 'all 0.2s' }}
-                            onMouseEnter={e => e.currentTarget.style.boxShadow = `0 6px 28px rgba(6,182,212,0.55)`}
-                            onMouseLeave={e => e.currentTarget.style.boxShadow = `0 4px 20px rgba(6,182,212,0.35)`}
-                        >
-                            {step < 3 ? 'Continue →' : 'Submit Experience'}
-                        </button>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            {step > 1 && (
+                                <button onClick={() => setStep(s => s - 1)} disabled={submitting} style={{ flex: 1, background: t.elevated, border: `1px solid ${t.border}`, color: t.textSecondary, padding: '11px 0', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600, fontFamily: "'Sora', sans-serif", transition: 'all 0.2s' }}>
+                                    Back
+                                </button>
+                            )}
+                            <button
+                                onClick={step < 3 ? () => setStep(s => s + 1) : handleSubmit}
+                                disabled={submitting}
+                                style={{ flex: 2, background: submitting ? t.elevated : t.cyan, border: 'none', color: submitting ? t.textMuted : '#000', padding: '11px 0', borderRadius: 10, cursor: submitting ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 700, fontFamily: "'Sora', sans-serif", boxShadow: submitting ? 'none' : `0 4px 20px rgba(6,182,212,0.35)`, transition: 'all 0.2s' }}
+                            >
+                                {step < 3 ? 'Continue →' : submitting ? 'Submitting…' : 'Submit Experience'}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
