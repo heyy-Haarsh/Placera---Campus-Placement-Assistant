@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import Hero from "./pages/Hero";
 import { FaBrain, FaFolderOpen, FaVideo, FaComments, FaGraduationCap, FaSearch, FaMapSigns, FaRocket } from "react-icons/fa";
 import { FaGoogle, FaMicrosoft, FaAmazon, FaStripe, FaUber, FaApple, FaPaypal, FaSpotify, FaMeta } from "react-icons/fa6";
-import PlaceraLogo from "./assets/Placera.png";
+
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 const FontLink = () => (
   <style>{`
@@ -292,8 +292,9 @@ function Nav() {
         boxShadow: scrolled ? "0 4px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)" : "none",
         transition: "background 0.4s, box-shadow 0.4s"
       }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
-          <img src={PlaceraLogo} alt="Placera" style={{ height: 28, objectFit: "contain" }} />
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: "linear-gradient(135deg,#06b6d4,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 900, color: "#fff", fontFamily: "'Sora',sans-serif" }}>P</div>
+          <span style={{ fontSize: 17, fontWeight: 800, color: "#f0f9ff", fontFamily: "'Sora',sans-serif", letterSpacing: "-0.5px" }}>Placera</span>
         </a>
         <div className="nav-links">
           {navItems.map(([l, id]) => <NL key={l} sectionId={id}>{l}</NL>)}
@@ -530,8 +531,8 @@ function CTASection() {
   return (
     <Reveal className="cta-pad" style={{ width: "100%", margin: "0 auto" }}>
       <div style={{ position: "relative", width: "100%", overflow: "hidden", borderRadius: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.7)", border: "1px solid rgba(6,182,212,0.15)" }}>
-        {/* BG image */}
-        <img src="/jeremy-bg.jpg" alt="" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }} />
+        {/* Gradient BG */}
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg,#020617 0%,#0c1a2e 40%,#061428 70%,#020617 100%)" }} />
         {/* dark overlay */}
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.68) 60%,rgba(6,182,212,0.06) 100%)" }} />
         {/* Glow */}

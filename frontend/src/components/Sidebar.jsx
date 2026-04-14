@@ -5,7 +5,7 @@ import {
   FiChevronLeft, FiChevronRight, FiSun, FiMoon,
   FiCheckCircle, FiStar, FiCalendar, FiShield, FiBarChart2
 } from 'react-icons/fi';
-import PlaceraLogo from '../assets/Placera.png';
+
 
 const NAV_MAIN = [
   { id: 'home',      icon: FiHome,       label: 'Home' },
@@ -79,7 +79,12 @@ const Sidebar = ({ activePage, onNavigate, t, dark, role, onRoleChange, collapse
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', padding: collapsed ? '18px 0' : '18px 12px 16px', borderBottom: `1px solid ${t.border}`, flexShrink: 0, minHeight: 62 }}>
-        {!collapsed && <img src={PlaceraLogo} alt="Placera" style={{ height: 26, objectFit: 'contain', filter: dark ? 'none' : 'invert(1)' }} />}
+        {!collapsed && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <div style={{ width: 24, height: 24, borderRadius: 6, background: 'linear-gradient(135deg,#06b6d4,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#fff', fontFamily: "'Sora',sans-serif", flexShrink: 0 }}>P</div>
+            <span style={{ fontSize: 15, fontWeight: 800, color: t.textPrimary, fontFamily: "'Sora',sans-serif", letterSpacing: '-0.3px' }}>Placera</span>
+          </div>
+        )}
         <button onClick={onToggle} style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4, borderRadius: 6, transition: 'color 0.2s' }}
           onMouseEnter={e => e.currentTarget.style.color = t.cyan}
           onMouseLeave={e => e.currentTarget.style.color = t.textMuted}>
