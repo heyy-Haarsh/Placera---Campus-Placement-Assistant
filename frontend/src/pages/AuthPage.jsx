@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaUserGraduate, FaUserTie, FaEnvelope, FaLock, FaUser, FaUniversity, FaBuilding, FaCalendarAlt, FaBullseye, FaBriefcase, FaLink } from "react-icons/fa";
-import PlaceraLogo from "../assets/Placera.png";
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const FontLink = () => (
@@ -95,7 +94,7 @@ function LoginForm({ role }) {
         const password = e.target.password.value;
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/login', {
+            const response = await fetch(`${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}/api/auth/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -172,7 +171,7 @@ function RegisterForm({ role }) {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:5000/api/auth/register', {
+            const response = await fetch(`${import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'}/api/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -279,15 +278,14 @@ export default function AuthPage() {
             >
                 {/* ── Left panel ── */}
                 <div style={{ position: "relative", padding: "48px 44px", display: "flex", flexDirection: "column", justifyContent: "space-between", borderRight: "1px solid rgba(6,182,212,0.1)", overflow: "hidden" }}>
-                    {/* BG image */}
-                    <img src="/jeremy-bg.jpg" alt="" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
-                    {/* dark overlay so text is legible */}
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(160deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.6) 60%,rgba(6,182,212,0.08) 100%)", backdropFilter: "blur(0px)" }} />
+                    {/* Gradient BG replacing missing image */}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #0a0a0a 0%, #0c1a2e 40%, #061428 70%, #040d1a 100%)" }} />
                     {/* content above overlay */}
                     <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", height: "100%" }}>
                         {/* logo */}
-                        <a href="/" style={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}>
-                            <img src={PlaceraLogo} alt="Placera" style={{ height: 32, objectFit: "contain", filter: "drop-shadow(0 0 8px rgba(6,182,212,0.3))" }} />
+                        <a href="/" style={{ display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+                            <div style={{ width: 30, height: 30, borderRadius: 8, background: "linear-gradient(135deg,#06b6d4,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: "#fff", fontFamily: "'Sora',sans-serif" }}>P</div>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: "#f4f4f5", fontFamily: "'Sora',sans-serif", letterSpacing: "-0.5px" }}>Placera</span>
                         </a>
 
                         {/* role description */}
