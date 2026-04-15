@@ -85,7 +85,8 @@ const Dashboard = ({ onNavigate, t, dark }) => {
   useEffect(() => {
     const userId = currentUser?._id || currentUser?.id;
     if (!userId) return;
-    fetch(`http://localhost:5000/api/stats/${userId}`)
+    const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    fetch(`${API_URL}/api/stats/${userId}`)
       .then(r => r.json())
       .then(setMockStats)
       .catch(() => {});

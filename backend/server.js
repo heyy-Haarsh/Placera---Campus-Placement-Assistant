@@ -30,6 +30,9 @@ app.use(cors());
 app.use(express.json());
 
 // REST Routes
+app.get('/', (req, res) => {
+  res.send('Placera API is running!');
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/mock-arena', mockArenaRoutes);
 app.use('/api/experiences', experienceRoutes);

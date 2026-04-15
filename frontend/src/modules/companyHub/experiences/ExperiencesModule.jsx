@@ -71,7 +71,8 @@ const ExperiencesModule = ({ companyData, t }) => {
     setModal(card);
     setML(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/experiences/${card.id}`);
+      const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+      const res = await fetch(`${API_URL}/api/experiences/${card.id}`);
       if (res.ok) {
         const { experience: raw } = await res.json();
         setModal({ ...card, rounds: (raw.rounds || []).map(r => ({ name: r.name, text: [r.desc, r.questions ? `Questions: ${r.questions}` : ''].filter(Boolean).join('\n\n') })) });

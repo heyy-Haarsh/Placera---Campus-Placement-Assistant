@@ -87,7 +87,8 @@ const Vault = ({ t, dark }) => {
     setModalExp(cardExp);          // show card data immediately
     setModalLoading(true);
     try {
-      const res = await fetch(`http://localhost:5000/api/experiences/${cardExp.id}`);
+      const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+      const res = await fetch(`${API_URL}/api/experiences/${cardExp.id}`);
       if (res.ok) {
         const { experience: raw } = await res.json();
         // Build the full normalized object with all rounds/tips from DB

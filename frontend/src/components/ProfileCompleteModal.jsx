@@ -314,7 +314,8 @@ const ProfileCompleteModal = ({ t, role, onComplete }) => {
         try {
             const token = localStorage.getItem('token');
             if (token) {
-                await fetch('http://localhost:5000/api/profile/complete', {
+                const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+                await fetch(`${API_URL}/api/profile/complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                     body: JSON.stringify({ ...data, role }),
